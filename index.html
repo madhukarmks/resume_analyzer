@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Intel Pro | ATS v3.0</title>
+    <title>AI Resume Intel Pro | ATS v3.1 Gold</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,7 +11,7 @@
         :root {
             --primary: #6366f1; --secondary: #a855f7; --bg: #0f172a;
             --glass: rgba(255, 255, 255, 0.05); --text: #f8fafc;
-            --toggle-bg: #334155;
+            --toggle-bg: #334155; --danger: #ef4444;
         }
 
         .light-theme {
@@ -39,6 +39,11 @@
 
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
 
+        #error-msg {
+            display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger);
+            color: #f87171; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;
+        }
+
         .theme-switch-wrapper { display: flex; align-items: center; }
         .theme-switch { display: inline-block; height: 34px; position: relative; width: 60px; }
         .theme-switch input { display: none; }
@@ -59,7 +64,6 @@
             border-radius: 20px; transition: 0.3s; cursor: pointer; margin-bottom: 20px;
         }
         #drop-zone.hover { background: rgba(99, 102, 241, 0.2); }
-        #drop-zone * { pointer-events: none; }
 
         .dashboard { display: grid; grid-template-columns: 350px 1fr; gap: 20px; display: none; }
         
@@ -77,12 +81,6 @@
         .typing::after { content: "|"; animation: blink 0.7s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        canvas { max-width: 100%; height: auto !important; }
-        .btn {
-            padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold;
-            cursor: pointer; background: var(--primary); color: white; transition: 0.2s;
-        }
-
         #loader { text-align: center; padding: 50px; display: none; }
         .spinner {
             width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1);
@@ -91,6 +89,10 @@
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         
+        .btn {
+            padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold;
+            cursor: pointer; background: var(--primary); color: white; transition: 0.2s;
+        }
         @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -106,6 +108,8 @@
             </label>
         </div>
     </header>
+
+    <div id="error-msg"></div>
 
     <div id="upload-view" class="glass-card">
         <div style="margin-bottom: 20px;">
@@ -131,7 +135,7 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <h2>Analyzing with AI Engine...</h2>
+        <h2>AI Engine Validating & Analyzing...</h2>
     </div>
 
     <div id="dashboard" class="dashboard">
@@ -150,7 +154,7 @@
             </div>
 
             <div style="margin-top:20px;">
-                <h4>Interview Suggestions</h4>
+                <h4>AI Insights</h4>
                 <p id="ai-suggestions" class="typing" style="font-size: 0.85rem; color: #94a3b8;"></p>
             </div>
             
@@ -192,27 +196,25 @@
 </div>
 
 <script>
-    const { jsPDF } = window.jspdf;
-    // Set PDF.js Worker path correctly
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-    const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const loader = document.getElementById('loader');
     const uploadView = document.getElementById('upload-view');
     const dashboard = document.getElementById('dashboard');
+    const errorMsg = document.getElementById('error-msg');
 
     function toggleTheme() { 
         document.body.classList.toggle('light-theme'); 
-        const isLight = document.body.classList.contains('light-theme');
-        if(window.myPie) {
-            window.myPie.options.plugins.legend.labels.color = isLight ? '#1e293b' : '#f8fafc';
-            window.myPie.update();
-        }
+        if(window.myPie) window.myPie.update();
     }
 
     fileInput.onchange = (e) => {
-        if(e.target.files.length > 0) handleFileSelection(e.target.files[0]);
+        if(e.target.files.length > 0) {
+            errorMsg.style.display = 'none';
+            handleFileSelection(e.target.files[0]);
+        }
     };
 
     function handleFileSelection(file) {
@@ -226,8 +228,7 @@
         try {
             if (file.type === "application/pdf") {
                 const arrayBuffer = await file.arrayBuffer();
-                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-                const pdf = await loadingTask.promise;
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
@@ -236,10 +237,25 @@
             } else {
                 text = await file.text();
             }
-            // Artificial delay for "AI thinking" effect
+
+            // --- MERGED VALIDATION LOGIC ---
+            const resumeMarkers = [/education/i, /experience/i, /skills/i, /projects/i, /summary/i];
+            const foundMarkers = resumeMarkers.filter(m => m.test(text)).length;
+
+            if (text.length < 150 || foundMarkers < 2) {
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    uploadView.style.display = 'block';
+                    errorMsg.innerHTML = "⚠️ <b>Invalid Document:</b> AI could not detect resume sections. Please upload a valid professional profile.";
+                    errorMsg.style.display = 'block';
+                    fileInput.value = ""; 
+                }, 1200);
+                return;
+            }
+
             setTimeout(() => analyze(text), 1500);
         } catch (err) {
-            alert("Could not read file. Ensure it is a valid PDF or TXT.");
+            alert("Error reading file.");
             location.reload();
         }
     }
@@ -251,23 +267,23 @@
         const sections = {
             Education: /education|university|college|degree/i.test(text),
             Experience: /experience|work|history|employment/i.test(text),
-            Projects: /projects|academic projects|portfolio/i.test(text),
+            Projects: /projects|portfolio/i.test(text),
             Skills: /skills|technical skills|expertise/i.test(text)
         };
 
         const skillLibrary = {
-            mern: ['mongodb', 'express', 'react', 'node', 'javascript', 'redux', 'rest api', 'jwt', 'mongoose'],
-            ds: ['python', 'r programming', 'sql', 'statistics', 'tableau', 'pandas', 'numpy', 'data visualization', 'matplotlib'],
-            frontend: ['html', 'css', 'javascript', 'react', 'vue', 'tailwind', 'typescript', 'sass', 'figma'],
-            java: ['java', 'spring boot', 'hibernate', 'maven', 'microservices', 'sql', 'docker', 'aws'],
-            ml: ['python', 'pytorch', 'tensorflow', 'scikit-learn', 'pandas', 'nlp', 'keras', 'deep learning'],
-            devops: ['docker', 'kubernetes', 'jenkins', 'aws', 'linux', 'terraform', 'ansible', 'git', 'ci/cd'],
-            cyber: ['network security', 'penetration testing', 'cryptography', 'firewalls', 'siem', 'ethical hacking', 'wireshark']
+            mern: ['mongodb', 'express', 'react', 'node', 'javascript', 'redux', 'rest api'],
+            ds: ['python', 'sql', 'pandas', 'numpy', 'scikit-learn', 'statistics'],
+            frontend: ['html', 'css', 'javascript', 'react', 'tailwind', 'typescript'],
+            java: ['java', 'spring boot', 'hibernate', 'maven', 'microservices'],
+            ml: ['pytorch', 'tensorflow', 'nlp', 'keras', 'deep learning'],
+            devops: ['docker', 'kubernetes', 'jenkins', 'aws', 'terraform'],
+            cyber: ['penetration testing', 'firewalls', 'siem', 'wireshark', 'linux']
         };
 
         const found = skillLibrary[role].filter(s => lowerText.includes(s));
         const missing = skillLibrary[role].filter(s => !lowerText.includes(s));
-        const weakWords = ['helped', 'tried', 'assisted', 'maybe', 'worked on', 'familiar with'];
+        const weakWords = ['helped', 'tried', 'assisted', 'maybe', 'familiar with'];
         const detectedWeak = weakWords.filter(w => lowerText.includes(w));
 
         const score = Math.round((found.length / skillLibrary[role].length) * 70 + (Object.values(sections).filter(v => v).length * 7.5));
@@ -292,54 +308,43 @@
         document.getElementById('weak-words-list').innerText = weak.length ? "Weak phrases detected: " + weak.join(', ') : "Professional language verified!";
 
         initCharts(found.length, missing.length);
-
         const roleName = document.getElementById('role-selector').selectedOptions[0].text;
-        typeEffect(`Analysis complete for ${roleName}. You have a strong grasp of ${found.length} key technologies.`);
+        typeEffect(`Analysis complete for ${roleName}. Profile score optimized for ATS tracking.`);
     }
 
     function initCharts(fCount, mCount) {
-        let radarCtx = document.getElementById('radarChart').getContext('2d');
-        let pieCtx = document.getElementById('densityChart').getContext('2d');
-        const isLight = document.body.classList.contains('light-theme');
-        
         if(window.myRadar) window.myRadar.destroy();
         if(window.myPie) window.myPie.destroy();
 
-        window.myRadar = new Chart(radarCtx, {
+        window.myRadar = new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: {
-                labels: ['Technical', 'Communication', 'Leadership', 'Problem Solving', 'Design'],
-                datasets: [{ label: 'Skill Set', data: [fCount*2, 7, 5, 8, 6], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366f1' }]
+                labels: ['Technical', 'Logic', 'Structure', 'Impact', 'Keywords'],
+                datasets: [{ label: 'Skill Set', data: [fCount*2, 7, 8, 6, 9], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366f1' }]
             },
-            options: { scales: { r: { ticks: { display: false }, grid: { color: 'rgba(128,128,128,0.2)' } } } }
+            options: { scales: { r: { ticks: { display: false } } } }
         });
 
-        window.myPie = new Chart(pieCtx, {
+        window.myPie = new Chart(document.getElementById('densityChart'), {
             type: 'doughnut',
             data: {
                 labels: ['Matched', 'Missing'],
                 datasets: [{ data: [fCount, mCount], backgroundColor: ['#34d399', '#f87171'] }]
-            },
-            options: { plugins: { legend: { labels: { color: isLight ? '#1e293b' : '#f8fafc' } } } }
+            }
         });
     }
 
     function typeEffect(text) {
-        let i = 0;
-        const target = document.getElementById('ai-suggestions');
+        let i = 0; const target = document.getElementById('ai-suggestions');
         target.innerHTML = "";
         function step() {
-            if (i < text.length) {
-                target.innerHTML += text.charAt(i);
-                i++;
-                setTimeout(step, 30);
-            }
+            if (i < text.length) { target.innerHTML += text.charAt(i); i++; setTimeout(step, 30); }
         }
         step();
     }
 
-  function downloadReport() {
-        try {
+    function downloadReport() {
+         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const roleName = document.getElementById('role-selector').selectedOptions[0].text;
@@ -480,7 +485,7 @@
             alert("Report generation failed. Please ensure the analysis is complete.");
         }
     }
+    
 </script>
 </body>
-
 </html>
