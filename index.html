@@ -344,148 +344,156 @@
     }
 
     function downloadReport() {
-         try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const roleName = document.getElementById('role-selector').selectedOptions[0].text;
-            const score = document.getElementById('score-meter').innerText;
-            const readiness = document.getElementById('ready-score').innerText;
-            const confidence = document.getElementById('conf-score').innerText;
-            
-            // --- PDF STYLING & DESIGN ---
-            // Header Background
-            doc.setFillColor(99, 102, 241);
-            doc.rect(0, 0, 210, 45, 'F');
-            
-            // Main Title
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(26);
-            doc.text("AI RESUME INTELLIGENCE AUDIT", 15, 25);
-            
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.text("Professional Candidate Benchmarking Report", 15, 35);
-            
-            // --- 1. CANDIDATE & ROLE OVERVIEW ---
-            doc.setTextColor(40, 40, 40);
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("1. Analysis Overview", 15, 60);
-            
-            // Divider line
-            doc.setDrawColor(200, 200, 200);
-            doc.line(15, 63, 195, 63);
-            
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "bold");
-            doc.text("Target Job Role:", 15, 72);
-            doc.setFont("helvetica", "normal");
-            doc.text(roleName, 55, 72);
-            
-            doc.setFont("helvetica", "bold");
-            doc.text("ATS Compatibility Score:", 15, 80);
-            doc.setFont("helvetica", "normal");
-            doc.text(score, 65, 80);
-            
-            doc.setFont("helvetica", "bold");
-            doc.text("AI Confidence Level:", 15, 88);
-            doc.setFont("helvetica", "normal");
-            doc.text(confidence, 58, 88);
-            
-            doc.setFont("helvetica", "bold");
-            doc.text("Interview Readiness:", 15, 96);
-            doc.setFont("helvetica", "normal");
-            doc.text(readiness, 58, 96);
-            
-            // --- 2. TECHNICAL COMPETENCY GAP ---
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("2. Technical Competency Breakdown", 15, 115);
-            doc.line(15, 118, 195, 118);
-            
-            const foundSkills = Array.from(document.querySelectorAll('#found-skills .badge')).map(b => b.innerText);
-            const missingSkills = Array.from(document.querySelectorAll('#missing-skills .badge')).map(b => b.innerText);
-            
-            doc.setFontSize(12);
-            doc.setTextColor(22, 163, 74); // Green for Matches
-            doc.setFont("helvetica", "bold");
-            doc.text("Matched Industry Keywords:", 15, 128);
-            
-            doc.setTextColor(60, 60, 60);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.text(foundSkills.join(" | ") || "No industry keywords detected.", 15, 135, { maxWidth: 180 });
-            
-            doc.setFontSize(12);
-            doc.setTextColor(220, 38, 38); // Red for Gaps
-            doc.setFont("helvetica", "bold");
-            doc.text("Critical Knowledge Gaps:", 15, 155);
-            
-            doc.setTextColor(60, 60, 60);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.text(missingSkills.join(" | ") || "No significant gaps found.", 15, 162, { maxWidth: 180 });
-            
-            // --- 3. STRUCTURAL AUDIT ---
-            doc.setTextColor(40, 40, 40);
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("3. Structural Integrity Check", 15, 185);
-            doc.line(15, 188, 195, 188);
-            
-           // --- 3. OPTIMIZED STRUCTURAL AUDIT ---
-            doc.setTextColor(40, 40, 40);
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("3. Structural Integrity Check", 15, 185);
-            doc.setDrawColor(200);
-            doc.line(15, 188, 195, 188); // Modern Divider
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const roleName = document.getElementById('role-selector').selectedOptions[0].text;
+        const score = document.getElementById('score-meter').innerText;
+        const readiness = document.getElementById('ready-score').innerText;
+        const confidence = document.getElementById('conf-score').innerText;
 
-           // Select all badges from the UI [cite: 11]
-           const sectionBadges = Array.from(document.querySelectorAll('#section-badges .badge'));
+        // --- PDF STYLING & DESIGN (KEEPING YOUR ORIGINAL LAYOUT) ---
+        // Header Background
+        doc.setFillColor(99, 102, 241);
+        doc.rect(0, 0, 210, 45, 'F');
 
-           // Separate sections into Found and Missing for better knowledge depth 
-           const foundSections = sectionBadges.filter(b => b.classList.contains('badge-success')).map(b => b.innerText.replace('✓', '').trim());
-           const missingSections = sectionBadges.filter(b => b.classList.contains   ('badge-fail')).map(b => b.innerText.replace('✗', '').trim());
+        // Main Title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(26);
+        doc.text("AI RESUME INTELLIGENCE AUDIT", 15, 25);
 
-            doc.setFontSize(11);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Professional Candidate Benchmarking Report", 15, 35);
 
-            
-            // --- 4. AI FINAL VERDICT & TIPS ---
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("4. AI Strategic Recommendations", 15, 215);
-            doc.line(15, 218, 195, 218);
-            
-            const verdict = document.getElementById('ai-suggestions').innerText;
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "italic");
-            doc.setTextColor(80, 80, 80);
-            doc.text(verdict, 15, 228, { maxWidth: 180, lineHeightFactor: 1.5 });
-            
-            // Professional Career Tip
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(99, 102, 241);
-            doc.text("Pro Tip:", 15, 255);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(40, 40, 40);
-            doc.text("To reach 90%+, quantify your results (e.g., 'Reduced processing time by 15%') rather than just listing duties.", 32, 255, { maxWidth: 160 });
+        // --- 1. CANDIDATE & ROLE OVERVIEW ---
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("1. Analysis Overview", 15, 60);
 
-            // Footer
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(150, 150, 150);
-            doc.text("Generated by AI Resume Intel Pro System - " + new Date().toLocaleString(), 105, 285, { align: "center" });
+        // Divider line
+        doc.setDrawColor(200, 200, 200);
+        doc.line(15, 63, 195, 63);
 
-            // Download trigger
-            doc.save(`Resume_Career_Audit_${roleName.replace(/\s+/g, '_')}.pdf`);
-        } catch (error) {
-            console.error("PDF Generation Error:", error);
-            alert("Report generation failed. Please ensure the analysis is complete.");
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Target Job Role:", 15, 72);
+        doc.setFont("helvetica", "normal");
+        doc.text(roleName, 55, 72);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("ATS Compatibility Score:", 15, 80);
+        doc.setFont("helvetica", "normal");
+        doc.text(score, 65, 80);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("AI Confidence Level:", 15, 88);
+        doc.setFont("helvetica", "normal");
+        doc.text(confidence, 58, 88);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("Interview Readiness:", 15, 96);
+        doc.setFont("helvetica", "normal");
+        doc.text(readiness, 58, 96);
+
+        // --- 2. TECHNICAL COMPETENCY GAP ---
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("2. Technical Competency Breakdown", 15, 115);
+        doc.line(15, 118, 195, 118);
+
+        const foundSkills = Array.from(document.querySelectorAll('#found-skills .badge')).map(b => b.innerText);
+        const missingSkills = Array.from(document.querySelectorAll('#missing-skills .badge')).map(b => b.innerText);
+
+        doc.setFontSize(12);
+        doc.setTextColor(22, 163, 74); // Green for Matches
+        doc.setFont("helvetica", "bold");
+        doc.text("Matched Industry Keywords:", 15, 128);
+
+        doc.setTextColor(60, 60, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(foundSkills.join(" | ") || "No industry keywords detected.", 15, 135, { maxWidth: 180 });
+
+        doc.setFontSize(12);
+        doc.setTextColor(220, 38, 38); // Red for Gaps
+        doc.setFont("helvetica", "bold");
+        doc.text("Critical Knowledge Gaps:", 15, 155);
+
+        doc.setTextColor(60, 60, 60);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(missingSkills.join(" | ") || "No significant gaps found.", 15, 162, { maxWidth: 180 });
+
+        // --- 3. STRUCTURAL AUDIT ---
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("3. Structural Integrity Check", 15, 185);
+        doc.setDrawColor(200);
+        doc.line(15, 188, 195, 188); // Modern Divider
+
+        const sectionBadges = Array.from(document.querySelectorAll('#section-badges .badge'));
+        const foundSections = sectionBadges.filter(b => b.classList.contains('badge-success')).map(b => b.innerText.replace('✓', '').trim());
+        const missingSections = sectionBadges.filter(b => b.classList.contains('badge-fail')).map(b => b.innerText.replace('✗', '').trim());
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text("Detected: " + (foundSections.join(", ") || "None"), 15, 196);
+        doc.text("Missing: " + (missingSections.join(", ") || "None"), 15, 204);
+
+        // --- 4. AI FINAL VERDICT & TIPS ---
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("4. AI Strategic Recommendations", 15, 215);
+        doc.line(15, 218, 195, 218);
+
+        const verdict = document.getElementById('ai-suggestions').innerText;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(80, 80, 80);
+        doc.text(verdict, 15, 228, { maxWidth: 180, lineHeightFactor: 1.5 });
+
+        // Professional Career Tip
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(99, 102, 241);
+        doc.text("Pro Tip:", 15, 255);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(40, 40, 40);
+        doc.text("To reach 90%+, quantify your results (e.g., 'Reduced processing time by 15%') rather than just listing duties.", 32, 255, { maxWidth: 160 });
+
+        // Footer
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(150, 150, 150);
+        doc.text("Generated by AI Resume Intel Pro System - " + new Date().toLocaleString(), 105, 285, { align: "center" });
+
+        // --- MOBILE COMPATIBLE DOWNLOAD LOGIC ---
+        const fileName = `Resume_Career_Audit_${roleName.replace(/\s+/g, '_')}.pdf`;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            const pdfBlob = doc.output('blob');
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        } else {
+            doc.save(fileName);
         }
+
+    } catch (error) {
+        console.error("PDF Generation Error:", error);
+        alert("Report generation failed. Please ensure the analysis is complete.");
     }
-    
+}
 </script>
 </body>
 </html>
+
