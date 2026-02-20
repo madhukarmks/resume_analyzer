@@ -474,8 +474,7 @@
         const fileName = `Resume_Career_Audit_${roleName.replace(/\s+/g, '_')}.pdf`;
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        if (isMobile) {
-            // Convert to Blob first (best for Android WebView/APK)
+       if (isMobile) {
             const pdfBlob = doc.output('blob');
             const url = URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
@@ -485,11 +484,7 @@
             link.click();
             document.body.removeChild(link);
             setTimeout(() => URL.revokeObjectURL(url), 100);
-            };
-            // Read as DataURL to trigger the download manager in mobile apps
-            reader.readAsDataURL(pdfBlob);
         } else {
-            // Standard Desktop save
             doc.save(fileName);
         }
 
@@ -501,6 +496,7 @@
 </script>
 </body>
 </html>
+
 
 
 
