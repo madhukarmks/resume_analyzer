@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Intel Pro | ATS v3.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1; --secondary: #a855f7; --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05); --text: #f8fafc;
+            --toggle-bg: #334155;
+        }
+
+        .light-theme {
+            --bg: #f1f5f9; --text: #1e293b; --glass: rgba(0, 0, 0, 0.05);
+            --toggle-bg: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+            transition: 0.3s; margin: 0; min-height: 100vh;
+            background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065); 
+            background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+        }
+        
+        body.light-theme { background: linear-gradient(45deg, #f1f5f9, #e2e8f0, #cbd5e1); }
+
+        @keyframes gradientBG { 0% {background-position: 0% 50%;} 50% {background-position: 100% 50%;} 100% {background-position: 0% 50%;} }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .glass-card { 
+            background: var(--glass); backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; 
+            transition: background 0.3s ease;
+        }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+
+        .theme-switch-wrapper { display: flex; align-items: center; }
+        .theme-switch { display: inline-block; height: 34px; position: relative; width: 60px; }
+        .theme-switch input { display: none; }
+        .slider {
+            background-color: var(--toggle-bg); bottom: 0; cursor: pointer; left: 0;
+            position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            background-color: #fff; bottom: 4px; content: "🌙"; 
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            height: 26px; left: 4px; position: absolute; transition: .4s; width: 26px; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(26px); content: "☀️"; }
+
+        #drop-zone {
+            border: 2px dashed var(--primary); padding: 50px; text-align: center;
+            border-radius: 20px; transition: 0.3s; cursor: pointer; margin-bottom: 20px;
+        }
+        #drop-zone.hover { background: rgba(99, 102, 241, 0.2); }
+        #drop-zone * { pointer-events: none; }
+
+        .dashboard { display: grid; grid-template-columns: 350px 1fr; gap: 20px; display: none; }
+        
+        .score-meter {
+            width: 150px; height: 150px; border-radius: 50%; border: 10px solid var(--primary);
+            display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold;
+            margin: 0 auto 20px; position: relative;
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; margin: 3px; display: inline-block; }
+        .badge-success { background: #065f46; color: #34d399; }
+        .badge-fail { background: #7f1d1d; color: #f87171; }
+
+        .typing::after { content: "|"; animation: blink 0.7s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        canvas { max-width: 100%; height: auto !important; }
+        .btn {
+            padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold;
+            cursor: pointer; background: var(--primary); color: white; transition: 0.2s;
+        }
+
+        #loader { text-align: center; padding: 50px; display: none; }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1);
+            border-top: 5px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>AI Resume <span style="color:var(--primary)">Intel Pro</span></h1>
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </header>
+
+    <div id="upload-view" class="glass-card">
+        <div style="margin-bottom: 20px;">
+            <label>Target Job Role:</label>
+            <select id="role-selector" class="btn" style="background: var(--bg); border: 1px solid var(--primary); color: var(--text);">
+                <option value="mern">MERN Stack Developer</option>
+                <option value="ds">Data Scientist</option>
+                <option value="frontend">Frontend Developer</option>
+                <option value="java">Java Developer</option>
+                <option value="ml">Machine Learning Engineer</option>
+                <option value="devops">DevOps Engineer</option>
+                <option value="cyber">Cybersecurity Analyst</option>
+            </select>
+        </div>
+        
+        <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div style="font-size: 3rem;">📄</div>
+            <h3>Click to Upload or Drag & Drop Resume</h3>
+            <p>PDF or TXT formats accepted</p>
+            <input type="file" id="file-input" hidden accept=".pdf,.txt">
+        </div>
+    </div>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <h2>Analyzing with AI Engine...</h2>
+    </div>
+
+    <div id="dashboard" class="dashboard">
+        <aside class="glass-card">
+            <div class="score-meter" id="score-meter">0%</div>
+            <h3 style="text-align:center">ATS Match Score</h3> 
+            <div class="stats-grid">
+                <div class="glass-card" style="padding:10px; text-align:center;">
+                    <small>Confidence</small>
+                    <div id="conf-score">0%</div>
+                </div>
+                <div class="glass-card" style="padding:10px; text-align:center;">
+                    <small>Readiness</small>
+                    <div id="ready-score">Low</div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px;">
+                <h4>Interview Suggestions</h4>
+                <p id="ai-suggestions" class="typing" style="font-size: 0.85rem; color: #94a3b8;"></p>
+            </div>
+            
+            <button class="btn" style="width:100%; margin-top:20px;" onclick="downloadReport()">Download PDF Report</button>
+            <button class="btn" style="width:100%; margin-top:10px; background:#475569;" onclick="location.reload()">Reset Analysis</button>
+        </aside>
+
+        <main class="glass-card">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div>
+                    <h4>Skill Analysis Radar</h4>
+                    <canvas id="radarChart"></canvas> 
+                </div>
+                <div>
+                    <h4>Keyword Match %</h4> 
+                    <canvas id="densityChart"></canvas>
+                </div>
+            </div>
+
+            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+            
+            <div id="section-results">
+                <h4>Section Detection Status</h4> 
+                <div id="section-badges"></div>
+            </div>
+
+            <div id="skill-results" style="margin-top: 20px;">
+                <h4>Detected vs Missing Skills</h4> 
+                <div id="found-skills"></div>
+                <div id="missing-skills" style="margin-top:10px;"></div>
+            </div>
+
+            <div id="grammar-check" style="margin-top: 20px;">
+                <h4>Weak Word Alert</h4> 
+                <div id="weak-words-list" style="color: #f87171; font-size: 0.9rem;"></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    // Set PDF.js Worker path correctly
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const loader = document.getElementById('loader');
+    const uploadView = document.getElementById('upload-view');
+    const dashboard = document.getElementById('dashboard');
+
+    function toggleTheme() { 
+        document.body.classList.toggle('light-theme'); 
+        const isLight = document.body.classList.contains('light-theme');
+        if(window.myPie) {
+            window.myPie.options.plugins.legend.labels.color = isLight ? '#1e293b' : '#f8fafc';
+            window.myPie.update();
+        }
+    }
+
+    fileInput.onchange = (e) => {
+        if(e.target.files.length > 0) handleFileSelection(e.target.files[0]);
+    };
+
+    function handleFileSelection(file) {
+        uploadView.style.display = 'none';
+        loader.style.display = 'block';
+        processResume(file);
+    }
+
+    async function processResume(file) {
+        let text = "";
+        try {
+            if (file.type === "application/pdf") {
+                const arrayBuffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const pdf = await loadingTask.promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(" ");
+                }
+            } else {
+                text = await file.text();
+            }
+            // Artificial delay for "AI thinking" effect
+            setTimeout(() => analyze(text), 1500);
+        } catch (err) {
+            alert("Could not read file. Ensure it is a valid PDF or TXT.");
+            location.reload();
+        }
+    }
+
+    function analyze(text) {
+        const lowerText = text.toLowerCase();
+        const role = document.getElementById('role-selector').value;
+
+        const sections = {
+            Education: /education|university|college|degree/i.test(text),
+            Experience: /experience|work|history|employment/i.test(text),
+            Projects: /projects|academic projects|portfolio/i.test(text),
+            Skills: /skills|technical skills|expertise/i.test(text)
+        };
+
+        const skillLibrary = {
+            mern: ['mongodb', 'express', 'react', 'node', 'javascript', 'redux', 'rest api', 'jwt', 'mongoose'],
+            ds: ['python', 'r programming', 'sql', 'statistics', 'tableau', 'pandas', 'numpy', 'data visualization', 'matplotlib'],
+            frontend: ['html', 'css', 'javascript', 'react', 'vue', 'tailwind', 'typescript', 'sass', 'figma'],
+            java: ['java', 'spring boot', 'hibernate', 'maven', 'microservices', 'sql', 'docker', 'aws'],
+            ml: ['python', 'pytorch', 'tensorflow', 'scikit-learn', 'pandas', 'nlp', 'keras', 'deep learning'],
+            devops: ['docker', 'kubernetes', 'jenkins', 'aws', 'linux', 'terraform', 'ansible', 'git', 'ci/cd'],
+            cyber: ['network security', 'penetration testing', 'cryptography', 'firewalls', 'siem', 'ethical hacking', 'wireshark']
+        };
+
+        const found = skillLibrary[role].filter(s => lowerText.includes(s));
+        const missing = skillLibrary[role].filter(s => !lowerText.includes(s));
+        const weakWords = ['helped', 'tried', 'assisted', 'maybe', 'worked on', 'familiar with'];
+        const detectedWeak = weakWords.filter(w => lowerText.includes(w));
+
+        const score = Math.round((found.length / skillLibrary[role].length) * 70 + (Object.values(sections).filter(v => v).length * 7.5));
+        const confidence = Math.min(score + 10, 100);
+
+        loader.style.display = 'none';
+        dashboard.style.display = 'grid';
+        displayUI(score, confidence, found, missing, sections, detectedWeak);
+    }
+
+    function displayUI(score, conf, found, missing, sections, weak) {
+        document.getElementById('score-meter').innerText = score + "%";
+        document.getElementById('conf-score').innerText = conf + "%";
+        document.getElementById('ready-score').innerText = score > 70 ? "High" : "Medium";
+
+        document.getElementById('section-badges').innerHTML = Object.entries(sections)
+            .map(([name, found]) => `<span class="badge ${found ? 'badge-success' : 'badge-fail'}">${name} ${found ? '✓' : '✗'}</span>`).join('');
+
+        document.getElementById('found-skills').innerHTML = `<b>Found:</b> ` + found.map(s => `<span class="badge badge-success">${s.toUpperCase()}</span>`).join('');
+        document.getElementById('missing-skills').innerHTML = `<b>Gap:</b> ` + missing.map(s => `<span class="badge badge-fail">${s.toUpperCase()}</span>`).join('');
+        
+        document.getElementById('weak-words-list').innerText = weak.length ? "Weak phrases detected: " + weak.join(', ') : "Professional language verified!";
+
+        initCharts(found.length, missing.length);
+
+        const roleName = document.getElementById('role-selector').selectedOptions[0].text;
+        typeEffect(`Analysis complete for ${roleName}. You have a strong grasp of ${found.length} key technologies.`);
+    }
+
+    function initCharts(fCount, mCount) {
+        let radarCtx = document.getElementById('radarChart').getContext('2d');
+        let pieCtx = document.getElementById('densityChart').getContext('2d');
+        const isLight = document.body.classList.contains('light-theme');
+        
+        if(window.myRadar) window.myRadar.destroy();
+        if(window.myPie) window.myPie.destroy();
+
+        window.myRadar = new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Technical', 'Communication', 'Leadership', 'Problem Solving', 'Design'],
+                datasets: [{ label: 'Skill Set', data: [fCount*2, 7, 5, 8, 6], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366f1' }]
+            },
+            options: { scales: { r: { ticks: { display: false }, grid: { color: 'rgba(128,128,128,0.2)' } } } }
+        });
+
+        window.myPie = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Matched', 'Missing'],
+                datasets: [{ data: [fCount, mCount], backgroundColor: ['#34d399', '#f87171'] }]
+            },
+            options: { plugins: { legend: { labels: { color: isLight ? '#1e293b' : '#f8fafc' } } } }
+        });
+    }
+
+    function typeEffect(text) {
+        let i = 0;
+        const target = document.getElementById('ai-suggestions');
+        target.innerHTML = "";
+        function step() {
+            if (i < text.length) {
+                target.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(step, 30);
+            }
+        }
+        step();
+    }
+
+  function downloadReport() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const roleName = document.getElementById('role-selector').selectedOptions[0].text;
+            const score = document.getElementById('score-meter').innerText;
+            const readiness = document.getElementById('ready-score').innerText;
+            const confidence = document.getElementById('conf-score').innerText;
+            
+            // --- PDF STYLING & DESIGN ---
+            // Header Background
+            doc.setFillColor(99, 102, 241);
+            doc.rect(0, 0, 210, 45, 'F');
+            
+            // Main Title
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(26);
+            doc.text("AI RESUME INTELLIGENCE AUDIT", 15, 25);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text("Professional Candidate Benchmarking Report", 15, 35);
+            
+            // --- 1. CANDIDATE & ROLE OVERVIEW ---
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("1. Analysis Overview", 15, 60);
+            
+            // Divider line
+            doc.setDrawColor(200, 200, 200);
+            doc.line(15, 63, 195, 63);
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Target Job Role:", 15, 72);
+            doc.setFont("helvetica", "normal");
+            doc.text(roleName, 55, 72);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("ATS Compatibility Score:", 15, 80);
+            doc.setFont("helvetica", "normal");
+            doc.text(score, 65, 80);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("AI Confidence Level:", 15, 88);
+            doc.setFont("helvetica", "normal");
+            doc.text(confidence, 58, 88);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("Interview Readiness:", 15, 96);
+            doc.setFont("helvetica", "normal");
+            doc.text(readiness, 58, 96);
+            
+            // --- 2. TECHNICAL COMPETENCY GAP ---
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("2. Technical Competency Breakdown", 15, 115);
+            doc.line(15, 118, 195, 118);
+            
+            const foundSkills = Array.from(document.querySelectorAll('#found-skills .badge')).map(b => b.innerText);
+            const missingSkills = Array.from(document.querySelectorAll('#missing-skills .badge')).map(b => b.innerText);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(22, 163, 74); // Green for Matches
+            doc.setFont("helvetica", "bold");
+            doc.text("Matched Industry Keywords:", 15, 128);
+            
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(foundSkills.join(" | ") || "No industry keywords detected.", 15, 135, { maxWidth: 180 });
+            
+            doc.setFontSize(12);
+            doc.setTextColor(220, 38, 38); // Red for Gaps
+            doc.setFont("helvetica", "bold");
+            doc.text("Critical Knowledge Gaps:", 15, 155);
+            
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(missingSkills.join(" | ") || "No significant gaps found.", 15, 162, { maxWidth: 180 });
+            
+            // --- 3. STRUCTURAL AUDIT ---
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("3. Structural Integrity Check", 15, 185);
+            doc.line(15, 188, 195, 188);
+            
+           // --- 3. OPTIMIZED STRUCTURAL AUDIT ---
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("3. Structural Integrity Check", 15, 185);
+            doc.setDrawColor(200);
+            doc.line(15, 188, 195, 188); // Modern Divider
+
+           // Select all badges from the UI [cite: 11]
+           const sectionBadges = Array.from(document.querySelectorAll('#section-badges .badge'));
+
+           // Separate sections into Found and Missing for better knowledge depth 
+           const foundSections = sectionBadges.filter(b => b.classList.contains('badge-success')).map(b => b.innerText.replace('✓', '').trim());
+           const missingSections = sectionBadges.filter(b => b.classList.contains   ('badge-fail')).map(b => b.innerText.replace('✗', '').trim());
+
+            doc.setFontSize(11);
+
+            
+            // --- 4. AI FINAL VERDICT & TIPS ---
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("4. AI Strategic Recommendations", 15, 215);
+            doc.line(15, 218, 195, 218);
+            
+            const verdict = document.getElementById('ai-suggestions').innerText;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(80, 80, 80);
+            doc.text(verdict, 15, 228, { maxWidth: 180, lineHeightFactor: 1.5 });
+            
+            // Professional Career Tip
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(99, 102, 241);
+            doc.text("Pro Tip:", 15, 255);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(40, 40, 40);
+            doc.text("To reach 90%+, quantify your results (e.g., 'Reduced processing time by 15%') rather than just listing duties.", 32, 255, { maxWidth: 160 });
+
+            // Footer
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(150, 150, 150);
+            doc.text("Generated by AI Resume Intel Pro System - " + new Date().toLocaleString(), 105, 285, { align: "center" });
+
+            // Download trigger
+            doc.save(`Resume_Career_Audit_${roleName.replace(/\s+/g, '_')}.pdf`);
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            alert("Report generation failed. Please ensure the analysis is complete.");
+        }
+    }
+</script>
+</body>
+</html>
